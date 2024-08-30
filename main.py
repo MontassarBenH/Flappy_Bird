@@ -217,7 +217,7 @@ def draw_fish(rect, movement):
     # Body outline
     pygame.draw.ellipse(screen, DARK_BLUE, body_rect, 2)
     
-    # Scales 
+    # Scales (simple version)
     for i in range(3):
         for j in range(4):
             scale_x = rect.left + rect.width // 3 + i * rect.width // 8
