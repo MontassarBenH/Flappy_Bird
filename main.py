@@ -31,18 +31,20 @@ PINK = (255, 192, 203)
 # Game Variables
 gravity = 0.3
 bird_movement = 0
-game_active = True
+game_active = False
+start_screen = True
 score = 0
 high_score = 0
 high_score_name = ""
 
 # Setup the display
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption('Flappy Bird - Improved Version')
+pygame.display.set_caption('Flappy Fish')
 
 # Game Font
 game_font = pygame.font.Font('freesansbold.ttf', 32)
 small_font = pygame.font.Font('freesansbold.ttf', 24)
+title_font = pygame.font.Font('freesansbold.ttf', 48)
 
 # fish dimensions and starting position
 #bird_rect = pygame.Rect(100, SCREEN_HEIGHT // 2, 40, 30)
@@ -110,6 +112,35 @@ def draw_pipes(pipes):
             pygame.draw.rect(screen, BLACK, pipe, 3)
             pygame.draw.rect(screen, (0, 150, 0), (pipe.left, pipe.bottom - 30, pipe_width, 30))
 
+
+def draw_flying_fish(screen, x, y, time):
+    # Colors
+    BODY_COLOR = (100, 149, 237)  
+    WING_COLOR = (173, 216, 230)  
+    EYE_COLOR = (0, 0, 0)  
+
+    # Body
+    body_rect = pygame.Rect(x, y, 80, 40)
+    pygame.draw.ellipse(screen, BODY_COLOR, body_rect)
+
+    # Wings
+    wing_angle = math.sin(time * 0.1) * 30  
+    wing_points = [
+        (x + 20, y + 20),
+        (x - 20, y - 20),
+        (x + 20, y - 20)
+    ]
+    rotated_wing = pygame.transform.rotate(
+        pygame.Surface((40, 40), pygame.SRCALPHA),
+        wing_angle
+    )
+    pygame.draw.polygon(rotated_wing, WING_COLOR, wing_points)
+    screen.blit(rotated_wing, rotated_wing.get_rect(center=(x+20, y+20)))
+
+    # Eye
+    pygame.draw.circle(screen, EYE_COLOR, (x + 70, y + 15), 5)
+
+
 def draw_fish(rect, movement):
     # Fish body
     body_rect = pygame.Rect(rect.left, rect.top, rect.width, rect.height)
@@ -125,16 +156,16 @@ def draw_fish(rect, movement):
     belly_rect = pygame.Rect(rect.left + rect.width // 4, rect.centery, rect.width * 2 // 3, rect.height // 2)
     pygame.draw.ellipse(screen, WHITE, belly_rect)
     
-    # Tail
+    # Tail 
     tail_angle = math.sin(pygame.time.get_ticks() * 0.01) * 30 - movement * 2
     tail_surf = pygame.Surface((rect.width // 2, rect.height), pygame.SRCALPHA)
     tail_points = [
-        (0, rect.height // 2),
-        (rect.width // 2, rect.height // 4),
-        (rect.width // 2, rect.height * 3 // 4)
+        (rect.width // 2, rect.height // 2),
+        (0, rect.height // 4),
+        (0, rect.height * 3 // 4)
     ]
     pygame.draw.polygon(tail_surf, LIGHT_BLUE, tail_points)
-    pygame.draw.polygon(tail_surf, DARK_BLUE, tail_points, 2)  # Tail outline
+    pygame.draw.polygon(tail_surf, DARK_BLUE, tail_points, 2)  
     rotated_tail = pygame.transform.rotate(tail_surf, tail_angle)
     tail_pos = (rect.left - rect.width // 8, rect.centery)
     screen.blit(rotated_tail, rotated_tail.get_rect(center=tail_pos))
@@ -144,7 +175,7 @@ def draw_fish(rect, movement):
     eye_y = rect.top + rect.height // 3
     pygame.draw.circle(screen, WHITE, (eye_x, eye_y), 8)
     pygame.draw.circle(screen, BLACK, (eye_x, eye_y), 4)
-    pygame.draw.circle(screen, WHITE, (eye_x - 1, eye_y - 1), 1)  # Eye highlight
+    pygame.draw.circle(screen, WHITE, (eye_x - 1, eye_y - 1), 1)  
     
     # Mouth
     mouth_points = [
@@ -153,30 +184,40 @@ def draw_fish(rect, movement):
         (rect.right - rect.width // 8, rect.centery - rect.height // 8)
     ]
     pygame.draw.polygon(screen, PINK, mouth_points)
-    pygame.draw.polygon(screen, DARK_BLUE, mouth_points, 2)  # Mouth outline
+    pygame.draw.polygon(screen, DARK_BLUE, mouth_points, 2)  
     
-    # Top fin
-    top_fin_points = [
-        (rect.centerx, rect.top),
-        (rect.centerx - rect.width // 6, rect.top - rect.height // 2),
-        (rect.centerx + rect.width // 6, rect.top - rect.height // 2)
+    # Wings (stationary)
+    # Top wing
+    top_wing_surf = pygame.Surface((rect.width // 2, rect.height // 2), pygame.SRCALPHA)
+    top_wing_points = [
+        (0, rect.height // 4),
+        (rect.width // 4, 0),
+        (rect.width // 2, rect.height // 4)
     ]
-    pygame.draw.polygon(screen, LIGHT_BLUE, top_fin_points)
-    pygame.draw.polygon(screen, DARK_BLUE, top_fin_points, 2)  # Top fin outline
-    
-    # Bottom fin
-    bottom_fin_points = [
-        (rect.centerx, rect.bottom),
-        (rect.centerx - rect.width // 8, rect.bottom + rect.height // 4),
-        (rect.centerx + rect.width // 8, rect.bottom + rect.height // 4)
+    pygame.draw.polygon(top_wing_surf, LIGHT_BLUE, top_wing_points)
+    pygame.draw.polygon(top_wing_surf, DARK_BLUE, top_wing_points, 2)  
+    top_wing_pos = (rect.centerx, rect.top)
+    screen.blit(top_wing_surf, top_wing_surf.get_rect(center=top_wing_pos))
+
+    # Bottom wing
+    bottom_wing_surf = pygame.Surface((rect.width // 2, rect.height // 2), pygame.SRCALPHA)
+    bottom_wing_points = [
+        (0, 0),
+        (rect.width // 4, rect.height // 4),
+        (rect.width // 2, 0)
     ]
-    pygame.draw.polygon(screen, LIGHT_BLUE, bottom_fin_points)
-    pygame.draw.polygon(screen, DARK_BLUE, bottom_fin_points, 2)  # Bottom fin outline
+    pygame.draw.polygon(bottom_wing_surf, LIGHT_BLUE, bottom_wing_points)
+    pygame.draw.polygon(bottom_wing_surf, DARK_BLUE, bottom_wing_points, 2)  
+
+    bottom_wing_offset = rect.height // 5
+
+    bottom_wing_pos = (rect.centerx, rect.bottom + bottom_wing_offset)
+    screen.blit(bottom_wing_surf, bottom_wing_surf.get_rect(center=bottom_wing_pos))
     
     # Body outline
     pygame.draw.ellipse(screen, DARK_BLUE, body_rect, 2)
     
-    # Scales (simple version)
+    # Scales 
     for i in range(3):
         for j in range(4):
             scale_x = rect.left + rect.width // 3 + i * rect.width // 8
@@ -312,6 +353,30 @@ def load_high_score():
     except FileNotFoundError:
         return 0, ""
 
+def draw_start_screen():
+    screen.blit(background, (0, 0))
+    
+    # Draw title
+    title_surface = title_font.render('Flappy Fish', True, WHITE)
+    title_rect = title_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 4))
+    screen.blit(title_surface, title_rect)
+    
+    # Draw start instruction
+    start_surface = game_font.render('Press SPACE to start', True, WHITE)
+    start_rect = start_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+    screen.blit(start_surface, start_rect)
+    
+    # Draw high score
+    high_score_surface = small_font.render(f'High Score: {int(high_score)} by {high_score_name}', True, WHITE)
+    high_score_rect = high_score_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT * 3 // 4))
+    screen.blit(high_score_surface, high_score_rect)
+    
+    # Draw fish
+    draw_fish(fish_rect, 0)
+    
+    # Draw ground
+    draw_ground()
+
 # Load high score
 high_score, high_score_name = load_high_score()
 
@@ -324,26 +389,34 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and game_active:
-                bird_movement = -8  # Fixed jump height
-            if event.key == pygame.K_SPACE and not game_active:
-                game_active = True
-                pipe_list.clear()
-                fish_rect.center = (100, SCREEN_HEIGHT // 2)
-                bird_movement = 0
-                score = 0
+            if event.key == pygame.K_SPACE:
+                if start_screen:
+                    start_screen = False
+                    game_active = True
+                    pipe_list.clear()
+                    fish_rect.center = (100, SCREEN_HEIGHT // 2)
+                    bird_movement = 0
+                    score = 0
+                elif game_active:
+                    bird_movement = -8  
+                else:
+                    game_active = True
+                    pipe_list.clear()
+                    fish_rect.center = (100, SCREEN_HEIGHT // 2)
+                    bird_movement = 0
+                    score = 0
 
-        if event.type == SPAWNPIPE:
+        if event.type == SPAWNPIPE and game_active:
             pipe_list.extend(create_pipe())
 
-    screen.blit(background, (0, 0))  # Sky color
+    if start_screen:
+        draw_start_screen()
+    elif game_active:
+        screen.blit(background, (0, 0))
 
-    if game_active:
         # Bird
         bird_movement += gravity
         fish_rect.centery += bird_movement
-        #bird_rect.centery += bird_movement
-        #draw_bird(bird_rect, bird_movement)
         draw_fish(fish_rect, bird_movement)
         game_active = check_collision(pipe_list)
 
@@ -354,17 +427,19 @@ while running:
         # Score
         score += 0.01
         display_score('main_game')
+
+        # Clouds
+        for cloud in clouds:
+            cloud.move()
+            cloud.draw()
+
+        # Ground
+        draw_ground()
     else:
+        screen.blit(background, (0, 0))
         high_score, high_score_name = update_score(score, high_score, high_score_name)
         display_score('game_over')
-
-    # Clouds
-    for cloud in clouds:
-        cloud.move()
-        cloud.draw()
-
-    # Ground
-    draw_ground()
+        draw_ground()
 
     pygame.display.update()
     clock.tick(60)
